@@ -1,5 +1,5 @@
 {
-  "name": "betterprompting",
+  "name": "betterprompting-monorepo",
   "version": "0.1.0",
   "private": true,
   "description": "Open-source analytics and prompt-optimization layer for AI coding tools (Cursor, Claude, Copilot).",

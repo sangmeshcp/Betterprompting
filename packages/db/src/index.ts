@@ -1,5 +1,6 @@
 import Database from "better-sqlite3";
 import { mkdirSync, existsSync } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { SCHEMA_SQL } from "./schema.js";
 
@@ -52,11 +53,16 @@ export interface AnalysisRow {
 
 let _db: Database.Database | null = null;
 
-export function getDbPath(): string {
+export function getDataDir(): string {
   return (
-    process.env.BETTERPROMPTING_DB ??
-    resolve(process.cwd(), "data", "betterprompting.db")
+    process.env.BETTERPROMPTING_DIR ??
+    resolve(homedir(), ".betterprompting")
   );
+}
+
+export function getDbPath(): string {
+  if (process.env.BETTERPROMPTING_DB) return process.env.BETTERPROMPTING_DB;
+  return resolve(getDataDir(), "betterprompting.db");
 }
 
 export function getDb(): Database.Database {

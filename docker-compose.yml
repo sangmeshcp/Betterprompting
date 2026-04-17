@@ -1,0 +1,19 @@
+services:
+  betterprompting:
+    build: .
+    image: betterprompting:latest
+    container_name: betterprompting
+    restart: unless-stopped
+    ports:
+      - "8787:8787"   # proxy
+      - "3000:3000"   # dashboard
+    volumes:
+      - betterprompting-data:/data
+    environment:
+      # Set this to enable the AI analyzer. Without it, the UI still works
+      # but runs in heuristics-only mode.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      BETTERPROMPTING_ANALYZER_MODEL: ${BETTERPROMPTING_ANALYZER_MODEL:-claude-opus-4-7}
+
+volumes:
+  betterprompting-data:

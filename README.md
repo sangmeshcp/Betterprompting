@@ -9,18 +9,89 @@ caching**.
 
 > Status: early — MIT licensed, contributions welcome.
 
+## Install
+
+Pick whichever fits your setup. All three land at the same place: a
+`betterprompting` command that starts the interceptor on `:8787` and stores
+data in `~/.betterprompting/`.
+
+### One-line install (macOS / Linux)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/sangmeshcp/betterprompting/main/install.sh | sh
+betterprompting            # starts the proxy
+```
+
+### npm
+
+```bash
+npm install -g betterprompting
+betterprompting
+```
+
+### Docker
+
+```bash
+docker run -d --name betterprompting \
+  -p 8787:8787 -p 3000:3000 \
+  -v betterprompting-data:/data \
+  -e ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY \
+  ghcr.io/sangmeshcp/betterprompting:latest
+```
+
+Or with compose:
+
+```bash
+git clone https://github.com/sangmeshcp/betterprompting && cd betterprompting
+ANTHROPIC_API_KEY=sk-ant-... docker compose up -d
+```
+
+### From source
+
+```bash
+git clone https://github.com/sangmeshcp/betterprompting && cd betterprompting
+npm install && npm run build
+npm run dev    # proxy on :8787, dashboard on :3000
+```
+
+## Configure your tools
+
+```bash
+# Claude Code / Anthropic SDK
+export ANTHROPIC_BASE_URL=http://127.0.0.1:8787
+
+# Cursor / OpenAI SDK / any OpenAI-compatible client
+export OPENAI_BASE_URL=http://127.0.0.1:8787/v1
+```
+
+Fire a request and open <http://localhost:3000> (or run
+`betterprompting events` to see activity from the terminal). Full per-tool
+walkthrough, including Copilot, in [`docs/clients.md`](./docs/clients.md).
+
 ## What it does
 
-1. **Intercepts** calls from Cursor, Claude Code, GitHub Copilot, and any other
-   tool that uses the Anthropic or OpenAI APIs.
+1. **Intercepts** calls from Cursor, Claude Code, GitHub Copilot, and any
+   other tool that uses the Anthropic or OpenAI APIs.
 2. **Stores** the prompt, response, model, token usage, and cache usage in a
    local SQLite database — no cloud, no telemetry.
 3. **Shows** analytics: requests, input/output tokens, cache hit ratio,
    estimated cost, per-client and per-model breakdowns.
-4. **Optimizes**: an AI workflow (powered by Claude with prompt caching of its
-   own system prompt, naturally) analyzes each prompt and suggests concrete
-   restructurings, compressions, and cache-control placements that measurably
-   reduce input tokens on repeat calls.
+4. **Optimizes**: an AI workflow (Claude with prompt caching of its own
+   system prompt, naturally) analyzes each prompt and suggests concrete
+   restructurings, compressions, and cache-control placements that
+   measurably reduce input tokens on repeat calls.
+
+## CLI
+
+```
+betterprompting [start]          Start the interceptor proxy (default)
+betterprompting init             Initialize the local database
+betterprompting doctor           Print config + health check
+betterprompting events           List recent events
+betterprompting show <id>        Print a single event as JSON
+betterprompting summary          Print usage summary for the last 30 days
+betterprompting analyze <id>     Run the AI optimizer on an event
+```
 
 ## Architecture
 
@@ -28,7 +99,7 @@ caching**.
 ┌──────────────┐   HTTPS    ┌───────────────────┐   HTTPS    ┌──────────────┐
 │ Cursor /     │ ─────────▶ │ betterprompting   │ ─────────▶ │ Anthropic /  │
 │ Claude Code /│            │   proxy (:8787)   │            │ OpenAI       │
-│ Copilot / … │ ◀───────── │ streams through  │ ◀───────── │              │
+│ Copilot / …  │ ◀───────── │ streams through   │ ◀───────── │              │
 └──────────────┘   SSE      └────────┬──────────┘   SSE      └──────────────┘
                                      │ writes
                                      ▼
@@ -40,9 +111,10 @@ caching**.
                                                    └──────────────────────┘
 ```
 
-The proxy preserves streaming end-to-end (SSE chunks are relayed as they arrive)
-and parses a copy of the stream in the background to extract the completion
-text and token usage. Your tool sees zero latency overhead beyond a local hop.
+The proxy preserves streaming end-to-end (SSE chunks are relayed as they
+arrive) and parses a copy of the stream in the background to extract the
+completion text and token usage. Your tool sees zero latency overhead beyond a
+local hop.
 
 ## Repo layout
 
@@ -51,61 +123,41 @@ apps/
   proxy/       Fastify interceptor (Anthropic + OpenAI endpoints)
   web/         Next.js 14 dashboard + analysis API routes
 packages/
+  cli/         `betterprompting` binary — publishable to npm
   db/          Shared SQLite schema & query helpers (better-sqlite3)
   analyzer/    AI workflow: heuristics + Claude-powered prompt optimizer
 ```
 
-## Quickstart
-
-```bash
-npm install
-npm run build            # compiles db + analyzer
-npm run db:init          # creates data/betterprompting.db
-npm run dev              # starts proxy on :8787 and dashboard on :3000
-```
-
-Open http://localhost:3000 — you'll see an empty dashboard. Then point your
-tool at the proxy (see the **Setup** page in the dashboard, or `docs/clients.md`):
-
-```bash
-# Claude Code / Anthropic SDK
-export ANTHROPIC_BASE_URL=http://127.0.0.1:8787
-
-# Cursor / OpenAI SDK
-export OPENAI_BASE_URL=http://127.0.0.1:8787/v1
-```
-
-Fire a request and refresh the dashboard.
-
 ## The AI optimization workflow
 
-When you click **Analyze** on an event, Betterprompting runs a two-stage
-workflow:
+When you click **Analyze** on an event (or run
+`betterprompting analyze <id>`), Betterprompting runs a two-stage workflow:
 
 1. **Heuristic pass** (deterministic, no API call) — flags cache-hostile
-   patterns like volatile timestamps / IDs in the prefix, large static content
-   at the tail, redundant restatements, and missing `cache_control` hints on
-   long prompts.
-2. **AI pass** — calls Claude with a cached system prompt. The model receives
-   the original prompt, the heuristic findings, and the completion, and returns
-   structured JSON with: a quality score, a cache-friendliness score,
-   ranked suggestions (each with an estimated token savings), and an optional
-   rewritten prompt that preserves intent while moving volatile content to the
-   end.
+   patterns like volatile timestamps / IDs in the prefix, large static
+   content at the tail, redundant restatements, and missing `cache_control`
+   hints on long prompts.
+2. **AI pass** — calls Claude with a cached system prompt. The model
+   receives the original prompt, the heuristic findings, and the completion,
+   and returns structured JSON with: a quality score, a cache-friendliness
+   score, ranked suggestions (each with an estimated token savings), and an
+   optional rewritten prompt that preserves intent while moving volatile
+   content to the end.
 
 Both passes are stored in `prompt_analyses` so you can see scoring drift over
 time as you refactor prompts.
 
 ## Configuration
 
-| Env var | Where | Default | What |
-|---|---|---|---|
-| `BETTERPROMPTING_DB` | proxy + web | `./data/betterprompting.db` | Shared SQLite path. |
-| `PORT` / `HOST` | proxy | `8787` / `127.0.0.1` | Proxy listen address. |
-| `ANTHROPIC_UPSTREAM` | proxy | `https://api.anthropic.com` | Override for testing / self-hosted gateways. |
-| `OPENAI_UPSTREAM` | proxy | `https://api.openai.com` | Same, for OpenAI-compatible APIs. |
-| `ANTHROPIC_API_KEY` | web | — | Required for the AI rewrite step. Without it, heuristic-only mode. |
-| `BETTERPROMPTING_ANALYZER_MODEL` | web | `claude-opus-4-7` | Any Claude model id. |
+| Env var | Default | What |
+|---|---|---|
+| `BETTERPROMPTING_DIR` | `~/.betterprompting` | Where SQLite lives. |
+| `BETTERPROMPTING_DB` | `$BETTERPROMPTING_DIR/betterprompting.db` | Override DB path directly. |
+| `HOST` / `PORT` | `127.0.0.1` / `8787` | Proxy listen address. |
+| `ANTHROPIC_UPSTREAM` | `https://api.anthropic.com` | Override for testing. |
+| `OPENAI_UPSTREAM` | `https://api.openai.com` | Same, for OpenAI-compatible APIs. |
+| `ANTHROPIC_API_KEY` | — | Required for the AI rewrite step. Heuristic-only without it. |
+| `BETTERPROMPTING_ANALYZER_MODEL` | `claude-opus-4-7` | Any Claude model id. |
 
 Credentials from the upstream client (your `x-api-key` / `Authorization`
 header) are forwarded to the provider and **redacted** before storage.
@@ -119,8 +171,7 @@ automatically.
 
 ## Contributing
 
-Issues and PRs are welcome. A few natural next steps if you're looking for
-somewhere to start:
+Issues and PRs are welcome. Good first projects:
 
 - Add more provider shapes (Google Gemini, AWS Bedrock, Azure OpenAI).
 - Record tool-use rounds as a linked trace, not just one flat prompt.
