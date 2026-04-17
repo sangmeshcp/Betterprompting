@@ -1,0 +1,23 @@
+{
+  "name": "@betterprompting/proxy",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/server.js",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js"
+  },
+  "dependencies": {
+    "@betterprompting/db": "*",
+    "fastify": "^4.28.0",
+    "undici": "^6.19.0",
+    "nanoid": "^5.0.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsx": "^4.16.0",
+    "typescript": "^5.4.0"
+  }
+}
