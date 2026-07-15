@@ -19,6 +19,7 @@
   "dependencies": {
     "@betterprompting/analyzer": "*",
     "@betterprompting/db": "*",
+    "@betterprompting/installer": "*",
     "@betterprompting/proxy": "*"
   },
   "devDependencies": {

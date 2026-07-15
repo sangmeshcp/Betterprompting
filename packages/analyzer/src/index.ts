@@ -99,13 +99,15 @@ export async function analyzePrompt(input: AnalyzeInput): Promise<{
   const msg = await client.messages.create({
     model: ANALYZER_MODEL,
     max_tokens: 2000,
+    // The published @anthropic-ai/sdk types for this SDK version don't yet
+    // include cache_control on system text blocks; the API accepts it fine.
     system: [
       {
         type: "text",
         text: ANALYZER_SYSTEM,
         cache_control: { type: "ephemeral" },
       },
-    ],
+    ] as any,
     messages: [{ role: "user", content: userBlock }],
   });
 

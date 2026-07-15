@@ -46,6 +46,7 @@ say "Installing dependencies..."
 say "Building..."
 ( cd "$SRC" \
   && npm --workspace @betterprompting/db run build \
+  && npm --workspace @betterprompting/installer run build \
   && npm --workspace @betterprompting/analyzer run build \
   && npm --workspace @betterprompting/proxy run build \
   && npm --workspace betterprompting run build )
@@ -75,9 +76,18 @@ else
   printf '    export PATH="%s:$PATH"\n' "$BIN_DIR"
 fi
 
-say "Done. Next:"
-printf "    betterprompting init\n"
-printf "    betterprompting            # starts the proxy on :8787\n\n"
-printf "Then point your tools at it:\n"
-printf "    export ANTHROPIC_BASE_URL=http://127.0.0.1:8787\n"
-printf "    export OPENAI_BASE_URL=http://127.0.0.1:8787/v1\n"
+say "Initializing database..."
+"$BIN_DIR/betterprompting" init >/dev/null
+
+if [ "${BETTERPROMPTING_SKIP_AUTOCONFIG:-0}" != "1" ]; then
+  say "Auto-configuring detected AI tools..."
+  "$BIN_DIR/betterprompting" install
+else
+  say "Skipping auto-config (BETTERPROMPTING_SKIP_AUTOCONFIG=1)."
+  say "Run \`betterprompting install\` when you're ready."
+fi
+
+say "Done."
+printf "\nOpen a new shell (so exports take effect) and try:\n"
+printf "    betterprompting doctor       # confirm what got configured\n"
+printf "    betterprompting events       # see captured prompts as they arrive\n"

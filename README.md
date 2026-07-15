@@ -57,16 +57,25 @@ npm run dev    # proxy on :8787, dashboard on :3000
 ## Configure your tools
 
 ```bash
-# Claude Code / Anthropic SDK
-export ANTHROPIC_BASE_URL=http://127.0.0.1:8787
-
-# Cursor / OpenAI SDK / any OpenAI-compatible client
-export OPENAI_BASE_URL=http://127.0.0.1:8787/v1
+betterprompting install
 ```
 
-Fire a request and open <http://localhost:3000> (or run
-`betterprompting events` to see activity from the terminal). Full per-tool
-walkthrough, including Copilot, in [`docs/clients.md`](./docs/clients.md).
+That's it. The installer:
+
+- Detects every supported AI tool (Cursor, Claude Code, Claude Desktop,
+  Continue.dev, Aider, Cline, Zed) and writes the right base-URL setting
+  into each tool's own config file.
+- Appends fenced `export ANTHROPIC_BASE_URL=…` / `OPENAI_BASE_URL=…` blocks
+  to your shell rc (`.zshrc` / `.bashrc` / fish / PowerShell profile).
+- Registers an auto-start service (LaunchAgent / systemd user unit /
+  Task Scheduler) so the proxy is always running.
+- Every change is idempotent, dry-runnable (`--dry-run`), and fully
+  reversible (`betterprompting uninstall`).
+
+Fire a request from any tool and it lands in the dashboard
+(<http://localhost:3000>) — or run `betterprompting events` to watch from
+the terminal. Full per-tool details, including the manual/headless path,
+in [`docs/clients.md`](./docs/clients.md).
 
 ## What it does
 
@@ -85,8 +94,13 @@ walkthrough, including Copilot, in [`docs/clients.md`](./docs/clients.md).
 
 ```
 betterprompting [start]          Start the interceptor proxy (default)
+betterprompting install          Auto-detect + configure every AI tool
+betterprompting install --dry-run
+betterprompting install --only cursor,claude-code
+betterprompting install --force  Override existing base URLs
+betterprompting uninstall        Reverse every change install made
 betterprompting init             Initialize the local database
-betterprompting doctor           Print config + health check
+betterprompting doctor           Config + detected-tool status + health check
 betterprompting events           List recent events
 betterprompting show <id>        Print a single event as JSON
 betterprompting summary          Print usage summary for the last 30 days

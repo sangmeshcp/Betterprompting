@@ -11,6 +11,7 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 COPY package.json ./
 COPY packages/db/package.json packages/db/
+COPY packages/installer/package.json packages/installer/
 COPY packages/analyzer/package.json packages/analyzer/
 COPY packages/cli/package.json packages/cli/
 COPY apps/proxy/package.json apps/proxy/
@@ -23,6 +24,7 @@ COPY tsconfig.base.json ./
 COPY packages/ packages/
 COPY apps/ apps/
 RUN npm --workspace @betterprompting/db run build \
+  && npm --workspace @betterprompting/installer run build \
   && npm --workspace @betterprompting/analyzer run build \
   && npm --workspace @betterprompting/proxy run build \
   && npm --workspace betterprompting run build \
